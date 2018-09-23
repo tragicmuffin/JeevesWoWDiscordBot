@@ -1,6 +1,9 @@
+#! python3
 import urllib.request, json
 from time import sleep
 from datetime import datetime
+import re
+import json
 
 #########################################################################
 
@@ -42,6 +45,30 @@ def _getWQjson(wq_html):
     return (wqs_data, wqs_list)
 
 
+zone_cache = {"9042": "Stormsong Valley", "8567": "Tiragarde Sound", "8721": "Drustvar", "8499": "Zuldazar", "8500": "Nazmir", "8501": "Vol'dun"}
+def _getZoneName(zone_id):
+    global zone_cache
+    zone_id = str(zone_id)
+    if zone_id in zone_cache:
+        return zone_cache[zone_id]
+    
+    # For any unexpected zones
+    with open("zone_cache.json", "r") as zf:
+        zone_cache = json.load(zf)
+        if zone_id in zone_cache:
+            return zone_cache[zone_id]
+
+    with urllib.request.urlopen(f"https://www.wowhead.com/zone={zone_id}") as r:
+        zone_html = r.read().decode("utf8")
+    pat = r"<title>(.+) - Zone - World of Warcraft<\/title>"
+    name = re.search(pat, zone_html).group(1)
+    zone_cache[zone_id] = name
+
+    with open("zone_cache.json", "w") as zf:
+        json.dump(zone_cache, zf)
+
+    return name
+
 def searchWQs(items=[], quests=[]):
     wq_html = _getWQhtml()
     (wqs_data, wqs_list) = _getWQjson(wq_html)
@@ -70,14 +97,19 @@ def searchWQs(items=[], quests=[]):
 
         if (type(rewards) is dict):  # if we have any rewards in this quest...
             for item in rewards['items']:
-                item_id = item['id'];
+                item_id = item['id']
                 item_name = _checkForItem(item_id, wqs_data, items)  # check if this item is in our list
                 if (item_name):
                     # We have a match. Go get the quest name and remaining time on this quest.
                     quest_name = _lookupQuest(quest_id, wqs_data)
 
                     quest_endtime_formatted = _formatTime(quest_endtime)
-                    output.append('**{}** found in quest *{}*.  Expires: {}.'.format(item_name, quest_name, quest_endtime_formatted))
+
+                    # Sometimes a quest contains multiple zone IDs
+                    _zn = [_getZoneName(x) for x in quest['zones']]
+                    zone_names = " in " + " and ".join(_zn) if _zn else "" # Sometimes wowhead doesn't return a zone name
+
+                    output.append('**{}** found in quest *{}*{}. Expires: {}. wowhead.com/quest={}'.format(item_name, quest_name, zone_names, quest_endtime_formatted, quest_id))
                     # TODO: Highlight searched keywords only.
     return output
 
@@ -117,5 +149,10 @@ def _formatTime(time):
 
 
 if __name__ == '__main__':
-    items = ['Bilewing', 'storm', 'glove']
-    searchWQs(items=items)
+    import sys
+    if not sys.argv[1:]:
+        items = ['Bilewing', 'storm', 'glove']
+        searchWQs(items=items)
+    else:
+        items = sys.argv[1:]
+    print(searchWQs(items=items))
