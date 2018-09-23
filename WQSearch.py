@@ -99,7 +99,7 @@ def searchWQs(items=[], quests=[]):
             for item in rewards['items']:
                 item_id = item['id']
                 item_name = _checkForItem(item_id, wqs_data, items)  # check if this item is in our list
-                if (item_name):
+                for item_name, watchlist_item in _checkForItem(item_id, wqs_data, items):
                     # We have a match. Go get the quest name and remaining time on this quest.
                     quest_name = _lookupQuest(quest_id, wqs_data)
 
@@ -108,9 +108,11 @@ def searchWQs(items=[], quests=[]):
                     # Sometimes a quest contains multiple zone IDs
                     _zn = [_getZoneName(x) for x in quest['zones']]
                     zone_names = " in " + " and ".join(_zn) if _zn else "" # Sometimes wowhead doesn't return a zone name
-
-                    output.append('**{}** found in quest *{}*{}. Expires: {}. wowhead.com/quest={}'.format(item_name, quest_name, zone_names, quest_endtime_formatted, quest_id))
-                    # TODO: Highlight searched keywords only.
+                    highlight_name = item_name
+                    pat = re.compile(f"({re.escape(watchlist_item)})", re.IGNORECASE)
+                    highlight_name = re.sub(pat, "**\\1**", item_name)
+                    
+                    output.append('{} found in quest *{}*{}. Expires: {}. wowhead.com/quest={}'.format(highlight_name, quest_name, zone_names, quest_endtime_formatted, quest_id))                
     return output
 
 
@@ -125,10 +127,7 @@ def _checkForItem(item_id, wqs_data, items_to_check):
 
     for item in items_to_check:
         if item.lower() in wqlist_item['name_enus'].lower():
-            return wqlist_item['name_enus']
-
-    else:
-        return False  # otherwise
+            yield (wqlist_item['name_enus'], item)
 
 
 def _lookupQuest(quest_id, wqs_data):
