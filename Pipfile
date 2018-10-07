@@ -5,9 +5,11 @@ name = "pypi"
 
 [packages]
 discord = "*"
+python-dateutil = "*"
 
 [dev-packages]
 pylint = "*"
+black = "*"
 
 [requires]
 python_version = "3.7"
