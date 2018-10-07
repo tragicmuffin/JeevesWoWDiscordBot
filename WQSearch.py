@@ -175,7 +175,7 @@ slot_ids = {
     15: ["Ranged", "gun", "bow", "weapon"],
     16: ["Back", "cloak"],
     17: ["Two-hand", r"two.?hand", "weapon"],
-    20: ["Trinket"],
+    20: ["Chest"], # Cloth chest armor is the only thing that has slotbak:20
     23: ["Off-hand", r"off.?hand"],
 }
 
@@ -194,6 +194,20 @@ def _checkForItems(item_id_list, wqs_data, items_to_check, slots_to_check):
         s_id = wqlist_item["jsonequip"].get("slotbak")
         slot = ""
         if s_id:
+            # slotbak:20 is a weird special case
+            if s_id == 20:
+                with open ("slot20.json", "r+") as f:
+                    # Log each weird looking item
+                    # TODO: come back and try to figure out what this means
+                    try:
+                        _slotbak_items = json.load(f)
+                    except json.decoder.JSONDecodeError:
+                        _slotbak_items = {}
+                with open ("slot20.json", "w") as f:
+                    if str(item_id) not in _slotbak_items:
+                        _slotbak_items[str(item_id)] = {"name": wqlist_item["name_enus"], "url": f"https://www.wowhead.com/item={item_id}"}
+                    f.write(json.dumps(_slotbak_items))
+
             slot_names = slot_ids[s_id]
             for s in slots_to_check:
                 if any(re.search(name, s, flags=re.IGNORECASE) for name in slot_names):
