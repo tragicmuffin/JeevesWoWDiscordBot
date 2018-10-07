@@ -1,6 +1,5 @@
 ## Bot Commands
 ### !help / !commands
--
 
 | Command                | Description |
 |---                     |---|
