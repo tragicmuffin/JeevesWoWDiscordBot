@@ -4,8 +4,9 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-discord = "*"
 python-dateutil = "*"
+pip = "==18.0"
+"discord.py" = {ref = "rewrite", git = "https://github.com/Rapptz/discord.py"}
 
 [dev-packages]
 pylint = "*"
