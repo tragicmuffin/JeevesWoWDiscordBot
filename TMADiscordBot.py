@@ -21,8 +21,9 @@ watchlist_filepath = path.join(script_dir, "userdata", "wq_watchlists")
 # Get Discord private token
 if getenv("DISCORD_TOKEN"):
     TOKEN = getenv("DISCORD_TOKEN")
-with open(path.join(script_dir, "secret", "key.txt"), "r") as f:
-    TOKEN = f.read()
+else:
+    with open(path.join(script_dir, "secret", "key.txt"), "r") as f:
+        TOKEN = f.read()
 client = discord.Client()
 
 
