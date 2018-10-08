@@ -1,1 +1,1 @@
-web: python TMADiscordBot.py
+worker: python TMADiscordBot.py
