@@ -7,10 +7,12 @@ name = "pypi"
 python-dateutil = "*"
 pip = "==18.0"
 "discord.py" = {ref = "rewrite", git = "https://github.com/Rapptz/discord.py"}
+"psycopg2-binary" = "*"
+sqlalchemy = "*"
 
 [dev-packages]
-pylint = "*"
 black = "*"
+"flake8" = "*"
 
 [requires]
 python_version = "3.7"

@@ -8,15 +8,36 @@ A(nother) WoW discord bot.
 """
 
 
-from functools import reduce
-from os import path, remove, listdir, getenv
-import json, asyncio
+import asyncio
+import json
+from os import getenv, listdir, path, remove
+
 import discord
+from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String
+from sqlalchemy.sql import insert, update, select
+from sqlalchemy.dialects.postgresql import JSONB
+
 import WQSearch
 
 script_dir = path.dirname(__file__)
-watchlist_filepath = path.join(script_dir, "userdata", "wq_watchlists")
-
+DATABASE_URL = getenv("DATABASE_URL")
+engine = create_engine(DATABASE_URL)
+metadata = MetaData(engine)
+conn = engine.connect()
+# watchlist_filepath = path.join(script_dir, "userdata", "wq_watchlists")
+if not engine.dialect.has_table(engine, "watchlists"):
+    watchlist_table = Table(
+        "watchlists",
+        metadata,
+        Column("id", Integer, primary_key=True),
+        Column("username", String),
+        Column("watchlist", JSONB),
+        autoload=True,
+        autoload_with=engine
+    )
+    metadata.create_all(engine)
+metadata.reflect(bind=engine)
+watchlist_table = metadata.tables["watchlists"]
 
 # Get Discord private token
 if getenv("DISCORD_TOKEN"):
@@ -60,7 +81,8 @@ f_pronouns_remove = []
 flags_all = [f_pronouns_add, f_pronouns_remove]
 
 
-async def commandHandler(message):
+@asyncio.coroutine
+def commandHandler(message):
 
     ########################
     ### General Commands ###
@@ -69,7 +91,7 @@ async def commandHandler(message):
     cmds = ["!commands", "!help"]
     if message.content.strip() in cmds:
         msg = _getCommandList()
-        await message.channel.send(msg)
+        yield from message.channel.send(msg)
 
     ###################
     ### WQ Commands ###
@@ -82,7 +104,7 @@ async def commandHandler(message):
 
         results = WQSearch.searchWQs(items=items, slots=slots)
         results_string = _parseWQResultsList(results, message)
-        await message.channel.send(results_string)
+        yield from message.channel.send(results_string)
 
     ## !wqwatch
     cmd = "!wqwatch "
@@ -95,50 +117,63 @@ async def commandHandler(message):
         watchlist["usermention"] = message.author.mention
         watchlist["items"] = items
 
-        try:
-            with open(
-                path.join(watchlist_filepath, message.author.name + ".json"), "x"
-            ) as f:
-                json.dump(watchlist, f)
-
-            await message.channel.send(
+        _query = select([watchlist_table]).where(watchlist_table.c.username == message.author.name)
+        userdata = conn.execute(_query).fetchone()
+        if not userdata:
+            conn.execute(watchlist_table.insert().values(username=message.author.name, watchlist=watchlist))
+            userdata = conn.execute(_query).fetchone()
+            yield from message.channel.send(
                 "{}'s watchlist saved.".format(message.author.mention)
             )
+        yield from message.channel.send(json.dumps(userdata))
 
-        except FileExistsError:
-            with open(
-                path.join(watchlist_filepath, message.author.name + ".json"), "r"
-            ) as f:
-                old_watchlist = json.load(f)
-                watchlist["items"] = old_watchlist["items"] + watchlist["items"]
+        # try:
+        #     with open(
+        #         path.join(watchlist_filepath, message.author.name + ".json"), "x"
+        #     ) as f:
+        #         json.dump(watchlist, f)
 
-            with open(
-                path.join(watchlist_filepath, message.author.name + ".json"), "w"
-            ) as f:
-                json.dump(watchlist, f)
+        #     yield from message.channel.send(
+        #         "{}'s watchlist saved.".format(message.author.mention)
+        #     )
 
-            await message.channel.send(
-                "{}'s watchlist updated.".format(message.author.mention)
-            )
+        # except FileExistsError:
+        #     with open(
+        #         path.join(watchlist_filepath, message.author.name + ".json"), "r"
+        #     ) as f:
+        #         old_watchlist = json.load(f)
+        #         watchlist["items"] = old_watchlist["items"] + watchlist["items"]
+
+        #     with open(
+        #         path.join(watchlist_filepath, message.author.name + ".json"), "w"
+        #     ) as f:
+        #         json.dump(watchlist, f)
+
+        #     yield from message.channel.send(
+        #         "{}'s watchlist updated.".format(message.author.mention)
+        #     )
 
     ## !wqwatchlist
     cmd = "!wqwatchlist"
     if message.content.strip() == cmd:
-        try:
-            with open(
-                path.join(watchlist_filepath, message.author.name + ".json"), "r"
-            ) as f:
-                watchlist = json.load(f)
-                watchlist_items = "__" + "__, __".join(watchlist["items"]) + "__"
-                await message.channel.send(
-                    "{}'s watchlist items: {}".format(
-                        message.author.mention, watchlist_items
-                    )
-                )
-        except OSError:
-            await message.channel.send(
-                "{} has no saved watchlist items.".format(message.author.mention)
-            )
+        _query = select([watchlist_table]).where(watchlist_table.c.username == message.author.name)
+        userdata = conn.execute(_query).fetchone()
+        yield from message.channel.send(json.dumps(userdata))
+        # try:
+        #     with open(
+        #         path.join(watchlist_filepath, message.author.name + ".json"), "r"
+        #     ) as f:
+        #         watchlist = json.load(f)
+        #         watchlist_items = "__" + "__, __".join(watchlist["items"]) + "__"
+        #         yield from message.channel.send(
+        #             "{}'s watchlist items: {}".format(
+        #                 message.author.mention, watchlist_items
+        #             )
+        #         )
+        # except OSError:
+        #     yield from message.channel.send(
+        #         "{} has no saved watchlist items.".format(message.author.mention)
+        #     )
 
     ## !wqremove
     cmd = "!wqremove "
@@ -162,12 +197,12 @@ async def commandHandler(message):
             ) as f:
                 json.dump(watchlist, f)
 
-            await message.channel.send(
+            yield from message.channel.send(
                 "Item(s) removed from {}'s watchlist.".format(message.author.mention)
             )
 
         except OSError:  # no such file
-            await message.channel.send(
+            yield from message.channel.send(
                 "{} has no saved watchlist items.".format(message.author.mention)
             )
 
@@ -176,11 +211,11 @@ async def commandHandler(message):
     if message.content.strip() == cmd:
         try:
             remove(path.join(watchlist_filepath, message.author.name + ".json"))
-            await message.channel.send(
+            yield from message.channel.send(
                 "{}'s watchlist has been cleared.".format(message.author.mention)
             )
         except OSError:
-            await message.channel.send(
+            yield from message.channel.send(
                 "{} has no saved watchlist items.".format(message.author.mention)
             )
 
@@ -193,7 +228,7 @@ async def commandHandler(message):
         for i, pn in enumerate(pronouns):
             pronoun_list += "**{}. {}**\n".format(i + 1, pn)
 
-        await message.channel.send(
+        yield from message.channel.send(
             "{} - Type a number corresponding to the pronouns you want to add from the list below.\n{}".format(
                 message.author.mention, pronoun_list
             )
@@ -214,7 +249,7 @@ async def commandHandler(message):
         for i, pn in enumerate(user_pronouns):
             pronoun_list += "**{}. {}**\n".format(i + 1, pn)
 
-        await message.channel.send(
+        yield from message.channel.send(
             "{} - Type a number corresponding to the pronouns you want to remove from the list below.\n{}".format(
                 message.author.mention, pronoun_list
             )
@@ -227,7 +262,7 @@ async def commandHandler(message):
         )  # start a task to expire flag
 
 
-async def nonCommandHandler(message):
+def nonCommandHandler(message):
 
     ############################
     ### Non-command Commands ###
@@ -241,22 +276,22 @@ async def nonCommandHandler(message):
                     message.guild.roles, name=pronouns[input_num]
                 )  # find role ID
 
-                await message.author.add_roles(pronoun_role)  # add role
-                await message.channel.send(
+                yield from message.author.add_roles(pronoun_role)  # add role
+                yield from message.channel.send(
                     "{} - Role added!".format(message.author.mention)
                 )
 
             else:
                 raise ValueError("Input out of range.")
         except ValueError:
-            await message.channel.send(
+            yield from message.channel.send(
                 "{} - Please input a number between {} and {}.".format(
                     message.author.mention, 1, len(pronouns)
                 )
             )
         except AttributeError:
             admin = discord.utils.get(message.guild.members, nick="Tenxian")
-            await message.channel.send(
+            yield from message.channel.send(
                 "{} - Something went wrong. {} needs to fix it.".format(
                     message.author.mention, admin.mention
                 )
@@ -274,21 +309,21 @@ async def nonCommandHandler(message):
                     message.guild.roles, name=user_pronouns[input_num]
                 )  # find role ID
 
-                await message.author.remove_roles(pronoun_role)  # remove role
-                await message.channel.send(
+                yield from message.author.remove_roles(pronoun_role)  # remove role
+                yield from message.channel.send(
                     "{} - Role removed!".format(message.author.mention)
                 )
             else:
                 raise ValueError("Input out of range.")
         except ValueError:
-            await message.channel.send(
+            yield from message.channel.send(
                 "{} - Please input a number between {} and {}.".format(
                     message.author.mention, 1, len(user_pronouns)
                 )
             )
         except AttributeError:
             admin = discord.utils.get(message.guild.members, nick="Tenxian")
-            await message.channel.send(
+            yield from message.channel.send(
                 "{} - Something went wrong. {} needs to fix it.".format(
                     message.author.mention, admin.mention
                 )
@@ -297,25 +332,27 @@ async def nonCommandHandler(message):
 
 # When a message is sent in the channel
 @client.event
-async def on_message(message):
+@asyncio.coroutine
+def on_message(message):
     # We do not want the bot to reply to itself
     if message.author == client.user:
         return
 
     # If we see a message in one of our channels that looks like a command, send it to the handler.
     if message.content.startswith("!") and (message.channel.name in botChannels):
-        await commandHandler(message)
+        yield from commandHandler(message)
     else:
-        await nonCommandHandler(message)
+        yield from nonCommandHandler(message)
 
 
 # Periodically checks for new world quests
-async def checkActiveWQs(interval=30):
+@asyncio.coroutine
+def checkActiveWQs(interval=30):
     interval_secs = interval * 60
-    await client.wait_until_ready()
+    yield from client.wait_until_ready()
 
     while True:
-        await asyncio.sleep(interval_secs)  # task runs every 60 seconds
+        yield from asyncio.sleep(interval_secs)  # task runs every 60 seconds
         bot_channel = discord.utils.get(
             client.get_all_channels(), name=bot_watchlist_channel
         )
@@ -348,12 +385,13 @@ async def checkActiveWQs(interval=30):
 
                 results_msg += "\n".join(results)
 
-                await bot_channel.send(results_msg)
+                yield from bot_channel.send(results_msg)
 
 
-async def _expireFlag(flaglist, user, seconds=60):
+@asyncio.coroutine
+def _expireFlag(flaglist, user, seconds=60):
     # After 'seconds' seconds, removename from flaglist.
-    await asyncio.sleep(seconds)
+    yield from asyncio.sleep(seconds)
     try:
         while True:
             flaglist.remove(user)  # make sure to get all of them
@@ -409,7 +447,8 @@ def _getCommandList():
 
 # When bot logs in
 @client.event
-async def on_ready():
+@asyncio.coroutine
+def on_ready():
     # print('Logged in as {}.'.format(client.user.name))
     print("Logged in.")
     print("--------------")

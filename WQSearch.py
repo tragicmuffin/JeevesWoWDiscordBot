@@ -1,9 +1,9 @@
 #! python3
-import urllib.request, json
-from time import sleep
-from datetime import datetime
-import re
 import json
+import re
+import urllib.request
+from datetime import datetime
+from time import sleep
 
 import dateutil.tz
 
@@ -175,7 +175,7 @@ slot_ids = {
     15: ["Ranged", "gun", "bow", "weapon"],
     16: ["Back", "cloak"],
     17: ["Two-hand", r"two.?hand", "weapon"],
-    20: ["Chest"], # Cloth chest armor is the only thing that has slotbak:20
+    20: ["Chest"],  # Cloth chest armor is the only thing that has slotbak:20
     23: ["Off-hand", r"off.?hand"],
 }
 
@@ -197,7 +197,7 @@ def _checkForItems(item_id_list, wqs_data, items_to_check, slots_to_check):
             # slotbak:20 is a weird special case
             if s_id == 20:
                 try:
-                    with open ("slot20.json", "r+") as f:
+                    with open("slot20.json", "r+") as f:
                         # Log each weird looking item
                         # TODO: come back and try to figure out what this means
                         try:
@@ -206,9 +206,12 @@ def _checkForItems(item_id_list, wqs_data, items_to_check, slots_to_check):
                             _slotbak_items = {}
                 except FileNotFoundError:
                     _slotbak_items = {}
-                with open ("slot20.json", "w") as f:
+                with open("slot20.json", "w") as f:
                     if str(item_id) not in _slotbak_items:
-                        _slotbak_items[str(item_id)] = {"name": wqlist_item["name_enus"], "url": f"https://www.wowhead.com/item={item_id}"}
+                        _slotbak_items[str(item_id)] = {
+                            "name": wqlist_item["name_enus"],
+                            "url": f"https://www.wowhead.com/item={item_id}",
+                        }
                     f.write(json.dumps(_slotbak_items))
 
             slot_names = slot_ids[s_id]
