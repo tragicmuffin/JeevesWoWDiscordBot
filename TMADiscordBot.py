@@ -9,35 +9,48 @@ A(nother) WoW discord bot.
 
 
 import asyncio
-import json
-from os import getenv, listdir, path, remove
+from os import getenv, path
 
 import discord
-from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String
-from sqlalchemy.sql import insert, update, select
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import Column, Integer, MetaData, String, Table, create_engine
+from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy.sql import select
 
 import WQSearch
 
 script_dir = path.dirname(__file__)
-DATABASE_URL = getenv("DATABASE_URL")
+DATABASE_URL = getenv("DATABASE_URL")  # Populated by Heroku
+if not DATABASE_URL:
+    import testing.postgresql
+
+    # Ephemeral Postgres DB for local testing
+    # Wiped every run
+    _pg = testing.postgresql.Postgresql()
+    params = _pg.dsn()
+    url = "postgresql://%s@%s:%d/%s" % (
+        params["user"],
+        params["host"],
+        params["port"],
+        params["database"],
+    )
+
+    DATABASE_URL = _pg.url()
 engine = create_engine(DATABASE_URL)
 metadata = MetaData(engine)
 conn = engine.connect()
 # watchlist_filepath = path.join(script_dir, "userdata", "wq_watchlists")
 if not engine.dialect.has_table(engine, "watchlists"):
-    watchlist_table = Table(
+    Watchlists = Table(
         "watchlists",
         metadata,
         Column("id", Integer, primary_key=True),
         Column("username", String),
-        Column("watchlist", JSONB),
-        autoload=True,
-        autoload_with=engine
+        Column("usermention", String),
+        Column("items", ARRAY(String)),
     )
     metadata.create_all(engine)
 metadata.reflect(bind=engine)
-watchlist_table = metadata.tables["watchlists"]
+Watchlists = metadata.tables["watchlists"]
 
 # Get Discord private token
 if getenv("DISCORD_TOKEN"):
@@ -106,117 +119,98 @@ def commandHandler(message):
         results_string = _parseWQResultsList(results, message)
         yield from message.channel.send(results_string)
 
+    _select_query = select([Watchlists]).where(
+        Watchlists.c.username == message.author.name
+    )
+
     ## !wqwatch
     cmd = "!wqwatch "
     if message.content.startswith(cmd):
-
         items = message.content[len(cmd) :].strip().split(", ")
-
-        watchlist = {}
-        watchlist["username"] = message.author.name
-        watchlist["usermention"] = message.author.mention
-        watchlist["items"] = items
-
-        _query = select([watchlist_table]).where(watchlist_table.c.username == message.author.name)
-        userdata = conn.execute(_query).fetchone()
+        userdata = conn.execute(_select_query).fetchone()
         if not userdata:
-            conn.execute(watchlist_table.insert().values(username=message.author.name, watchlist=watchlist))
-            userdata = conn.execute(_query).fetchone()
-            yield from message.channel.send(
-                "{}'s watchlist saved.".format(message.author.mention)
+            conn.execute(
+                Watchlists.insert().values(
+                    username=message.author.name,
+                    usermention=message.author.mention,
+                    items=items,
+                )
             )
-        yield from message.channel.send(json.dumps(userdata))
-
-        # try:
-        #     with open(
-        #         path.join(watchlist_filepath, message.author.name + ".json"), "x"
-        #     ) as f:
-        #         json.dump(watchlist, f)
-
-        #     yield from message.channel.send(
-        #         "{}'s watchlist saved.".format(message.author.mention)
-        #     )
-
-        # except FileExistsError:
-        #     with open(
-        #         path.join(watchlist_filepath, message.author.name + ".json"), "r"
-        #     ) as f:
-        #         old_watchlist = json.load(f)
-        #         watchlist["items"] = old_watchlist["items"] + watchlist["items"]
-
-        #     with open(
-        #         path.join(watchlist_filepath, message.author.name + ".json"), "w"
-        #     ) as f:
-        #         json.dump(watchlist, f)
-
-        #     yield from message.channel.send(
-        #         "{}'s watchlist updated.".format(message.author.mention)
-        #     )
+        else:
+            items = list(set(items + userdata["items"]))
+            conn.execute(
+                Watchlists.update()
+                .where(Watchlists.c.username == message.author.name)
+                .values(
+                    username=message.author.name,
+                    usermention=message.author.mention,
+                    items=items,
+                )
+            )
+        userdata = conn.execute(_select_query).fetchone()
+        watchlist_items = "__" + "__, __".join(userdata["items"]) + "__"
+        yield from message.channel.send(
+            "{}'s watchlist saved. Items: {}".format(
+                message.author.mention, watchlist_items
+            )
+        )
 
     ## !wqwatchlist
     cmd = "!wqwatchlist"
     if message.content.strip() == cmd:
-        _query = select([watchlist_table]).where(watchlist_table.c.username == message.author.name)
-        userdata = conn.execute(_query).fetchone()
-        yield from message.channel.send(json.dumps(userdata))
-        # try:
-        #     with open(
-        #         path.join(watchlist_filepath, message.author.name + ".json"), "r"
-        #     ) as f:
-        #         watchlist = json.load(f)
-        #         watchlist_items = "__" + "__, __".join(watchlist["items"]) + "__"
-        #         yield from message.channel.send(
-        #             "{}'s watchlist items: {}".format(
-        #                 message.author.mention, watchlist_items
-        #             )
-        #         )
-        # except OSError:
-        #     yield from message.channel.send(
-        #         "{} has no saved watchlist items.".format(message.author.mention)
-        #     )
+        userdata = conn.execute(_select_query).fetchone()
+        if userdata:
+            watchlist_items = "__" + "__, __".join(userdata["items"]) + "__"
+            yield from message.channel.send(
+                "{}'s watchlist saved. Current watchlist: {}".format(
+                    message.author.mention, watchlist_items
+                )
+            )
+        else:
+            yield from message.channel.send(
+                "{} has no saved watchlist items.".format(message.author.mention)
+            )
 
     ## !wqremove
     cmd = "!wqremove "
     if message.content.startswith(cmd):
         items = message.content[len(cmd) :].strip().split(", ")
-
-        try:
-            with open(
-                path.join(watchlist_filepath, message.author.name + ".json"), "r"
-            ) as f:
-                watchlist = json.load(f)
-
-            new_itemlist = watchlist["items"]
-            for item in items:
-                if item in watchlist["items"]:
-                    new_itemlist.remove(item)
-            watchlist["items"] = new_itemlist
-
-            with open(
-                path.join(watchlist_filepath, message.author.name + ".json"), "w"
-            ) as f:
-                json.dump(watchlist, f)
-
-            yield from message.channel.send(
-                "Item(s) removed from {}'s watchlist.".format(message.author.mention)
-            )
-
-        except OSError:  # no such file
+        userdata = conn.execute(_select_query).fetchone()
+        if not userdata:
             yield from message.channel.send(
                 "{} has no saved watchlist items.".format(message.author.mention)
+            )
+        else:
+            items = list(set(userdata["items"]) - set(items))
+            conn.execute(
+                Watchlists.update()
+                .where(Watchlists.c.username == message.author.name)
+                .values(items=items)
+            )
+            userdata = conn.execute(_select_query).fetchone()
+            watchlist_items = "__" + "__, __".join(userdata["items"]) + "__"
+            yield from message.channel.send(
+                "Item(s) removed from {}'s watchlist. Current watchlist: {}".format(
+                    message.author.mention, watchlist_items
+                )
             )
 
     ## !wqclear
     cmd = "!wqclear"
     if message.content.strip() == cmd:
-        try:
-            remove(path.join(watchlist_filepath, message.author.name + ".json"))
-            yield from message.channel.send(
-                "{}'s watchlist has been cleared.".format(message.author.mention)
-            )
-        except OSError:
+        userdata = conn.execute(_select_query).fetchone()
+        if not userdata:
             yield from message.channel.send(
                 "{} has no saved watchlist items.".format(message.author.mention)
+            )
+        else:
+            conn.execute(
+                Watchlists.delete().where(Watchlists.c.username == message.author.name)
+            )
+            yield from message.channel.send(
+                "Item(s) removed from {}'s watchlist. Current watchlist: {}".format(
+                    message.author.mention, []
+                )
             )
 
     #############
@@ -357,16 +351,7 @@ def checkActiveWQs(interval=30):
             client.get_all_channels(), name=bot_watchlist_channel
         )
 
-        watchlist_files = [
-            f
-            for f in listdir(watchlist_filepath)
-            if path.isfile(path.join(watchlist_filepath, f))
-        ]
-
-        for watchlist_filename in watchlist_files:
-            with open(path.join(watchlist_filepath, watchlist_filename), "r") as f:
-                watchlist = json.load(f)
-
+        for watchlist in conn.execute(select([Watchlists])):
             items, slots = WQSearch.parse_slots(watchlist["items"])
             results = WQSearch.searchWQs(items=items, slots=slots)
 

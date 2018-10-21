@@ -3,7 +3,6 @@ import json
 import re
 import urllib.request
 from datetime import datetime
-from time import sleep
 
 import dateutil.tz
 

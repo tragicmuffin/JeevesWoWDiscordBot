@@ -13,6 +13,7 @@ sqlalchemy = "*"
 [dev-packages]
 black = "*"
 "flake8" = "*"
+"testing.postgresql" = "*"
 
 [requires]
 python_version = "3.7"
