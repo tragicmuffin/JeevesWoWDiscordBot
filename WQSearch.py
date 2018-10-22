@@ -63,20 +63,11 @@ def _getZoneName(zone_id):
     if zone_id in zone_cache:
         return zone_cache[zone_id]
 
-    # For any unexpected zones
-    with open("zone_cache.json", "r") as zf:
-        zone_cache = json.load(zf)
-        if zone_id in zone_cache:
-            return zone_cache[zone_id]
-
     with urllib.request.urlopen(f"https://www.wowhead.com/zone={zone_id}") as r:
         zone_html = r.read().decode("utf8")
     pat = r"<title>(.+) - Zone - World of Warcraft<\/title>"
     name = re.search(pat, zone_html).group(1)
     zone_cache[zone_id] = name
-
-    with open("zone_cache.json", "w") as zf:
-        json.dump(zone_cache, zf)
 
     return name
 
@@ -193,26 +184,6 @@ def _checkForItems(item_id_list, wqs_data, items_to_check, slots_to_check):
         s_id = wqlist_item["jsonequip"].get("slotbak")
         slot = ""
         if s_id:
-            # slotbak:20 is a weird special case
-            if s_id == 20:
-                try:
-                    with open("slot20.json", "r+") as f:
-                        # Log each weird looking item
-                        # TODO: come back and try to figure out what this means
-                        try:
-                            _slotbak_items = json.load(f)
-                        except json.decoder.JSONDecodeError:
-                            _slotbak_items = {}
-                except FileNotFoundError:
-                    _slotbak_items = {}
-                with open("slot20.json", "w") as f:
-                    if str(item_id) not in _slotbak_items:
-                        _slotbak_items[str(item_id)] = {
-                            "name": wqlist_item["name_enus"],
-                            "url": f"https://www.wowhead.com/item={item_id}",
-                        }
-                    f.write(json.dumps(_slotbak_items))
-
             slot_names = slot_ids[s_id]
             for s in slots_to_check:
                 if any(re.search(name, s, flags=re.IGNORECASE) for name in slot_names):
