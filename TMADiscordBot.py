@@ -256,6 +256,7 @@ def commandHandler(message):
         )  # start a task to expire flag
 
 
+@asyncio.coroutine
 def nonCommandHandler(message):
 
     ############################
