@@ -42,3 +42,23 @@
     }
 }
 ```
+## Developer guide
+To run this project locally, you must first install the PostgreSQL binary for your environment and be able to run [`psql` from the command line](https://www.postgresql.org/download/).
+
+This project uses [`Pipenv` (found here)](https://pipenv.readthedocs.io/en/latest/basics/) to manage all python dependencies. 
+
+Getting started locally:
+```
+python3 -m pip install pipenv
+pipenv install --dev .
+pipenv run python TMADiscordBot.py
+```
+
+To test locally using the remote Heroku database, you must install the [`Heroku` CLI tool](https://devcenter.heroku.com/articles/heroku-cli):
+```
+pipenv run heroku local
+```
+To open Postgres command line on remote PSQL DB:
+```
+heroku pg psql
+```
