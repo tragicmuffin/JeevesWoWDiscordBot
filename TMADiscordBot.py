@@ -9,6 +9,7 @@ A(nother) WoW discord bot.
 
 
 import asyncio
+from datetime import datetime
 from os import getenv, path
 
 import discord
@@ -342,34 +343,40 @@ def on_message(message):
 
 # Periodically checks for new world quests
 @asyncio.coroutine
-def checkActiveWQs(interval=30):
+def checkActiveWQs(interval=5, stale_wqs={}):
     interval_secs = interval * 60
     yield from client.wait_until_ready()
 
     while True:
-        yield from asyncio.sleep(interval_secs)  # task runs every 60 seconds
+        yield from asyncio.sleep(interval_secs)
         bot_channel = discord.utils.get(
             client.get_all_channels(), name=bot_watchlist_channel
         )
-
+        _now = int(datetime.timestamp(datetime.utcnow()))
+        if stale_wqs:
+            stale_wqs = {
+                q_id: q_endtime
+                for q_id, q_endtime in stale_wqs.items()
+                if _now < q_endtime
+            }
         for watchlist in conn.execute(select([Watchlists])):
             items, slots = WQSearch.parse_slots(watchlist["items"])
             results = WQSearch.searchWQs(items=items, slots=slots)
 
             results_msg = ""
-            if results:  # non-empty
-                results_msg += (
+            for q_id, q_info in results.items():
+                if q_id in stale_wqs:
+                    continue
+                stale_wqs[q_id] = q_info["endtime"]
+                results_msg += f"\n\t• {q_info['output']}"
+
+            if results_msg:  # non-empty
+                results_msg = (
                     "Active WQ item reward in {}'s watchlist!".format(
                         watchlist["usermention"]
                     )
-                    + "\n"
-                )
-
-                if len(results) > 20:
-                    results = results[:20]
-                    results_msg += "*Too many results. Only showing first 20:*\n"
-
-                results_msg += "\n".join(results)
+                    + "\n\n"
+                ) + results_msg
 
                 yield from bot_channel.send(results_msg)
 
@@ -400,16 +407,18 @@ def _waitForNonCommand(user, flag_to_set):
 
 
 def _parseWQResultsList(results, message):
+    output = [v["output"] for k, v in results.items()]
     results_msg = ""
-    if results:  # non-empty
+    if output:  # non-empty
 
-        results_msg += message.author.mention + "\n"
+        results_msg += message.author.mention
+        if len(output) > 10:
+            output = output[:10]
+            results_msg += "\n*Too many results. Only showing first 10:*"
 
-        if len(results) > 10:
-            results = results[:10]
-            results_msg += "*Too many results. Only showing first 10:*\n"
+        results_msg += "\n\t• "
 
-        results_msg += "\n".join(results)
+        results_msg += "\n\t• ".join(output)
         return results_msg
 
     else:  # empty
@@ -440,5 +449,7 @@ def on_ready():
     print("--------------")
 
 
-client.loop.create_task(checkActiveWQs(interval=30))  # minutes to wait between scans
+client.loop.create_task(
+    checkActiveWQs(interval=5, stale_wqs={})
+)  # minutes to wait between scans
 client.run(TOKEN)  # run async thread

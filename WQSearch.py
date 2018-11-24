@@ -72,7 +72,7 @@ def _getZoneName(zone_id):
     return name
 
 
-def searchWQs(items=[], quests=[], slots=[]):
+def searchWQs(items=[], slots=[]):
     wq_html = _getWQhtml()
     (wqs_data, wqs_list) = _getWQjson(wq_html)
 
@@ -92,10 +92,10 @@ def searchWQs(items=[], quests=[], slots=[]):
     # list_data.rewards.items.id: If there are item rewards, this will hold their ids.
     # list_data.rewards.zones: list of zone ids for the WQ
 
-    output = []
+    results = {}
     for quest in list_data:
         quest_id = quest["id"]
-        quest_endtime = quest["ending"]
+        quest_endtime = int(quest["ending"] / 1000)
         rewards = quest["rewards"]
 
         if type(rewards) is dict:  # if we have any rewards in this quest...
@@ -141,10 +141,9 @@ def searchWQs(items=[], quests=[], slots=[]):
                 )  # Sometimes wowhead doesn't return a zone name
 
                 # TODO: Format this as something other than a single line
-                output.append(
-                    f"{item_output_string} found in quest *{quest_name}*{zone_names}{faction_limit}. Expires: {quest_endtime_formatted} server. wowhead.com/quest={quest_id}"
-                )
-    return output
+                out_string = f"{item_output_string} found in quest *{quest_name}*{zone_names}{faction_limit}. Expires: {quest_endtime_formatted} server. wowhead.com/quest={quest_id}"
+                results[quest_id] = {"endtime": quest_endtime, "output": out_string}
+    return results
 
 
 # Wowhead returns the slot for the reward item as an integer ID.
@@ -183,12 +182,14 @@ def _checkForItems(item_id_list, wqs_data, items_to_check, slots_to_check):
         # Get the slot ID of the item returned by wowhead
         s_id = wqlist_item["jsonequip"].get("slotbak")
         slot = ""
-        if s_id:
+        try:
             slot_names = slot_ids[s_id]
-            for s in slots_to_check:
-                if any(re.search(name, s, flags=re.IGNORECASE) for name in slot_names):
-                    # Watchlist slot 's' matches one of the slot names for this item
-                    slot = s
+        except KeyError:
+            slot_names = ["other"]
+        for s in slots_to_check:
+            if any(re.search(name, s, flags=re.IGNORECASE) for name in slot_names):
+                # Watchlist slot 's' matches one of the slot names for this item
+                slot = s
         item = ""
         for i in items_to_check:
             if i.lower() in wqlist_item["name_enus"].lower():
@@ -213,7 +214,7 @@ def _lookupQuest(quest_id, wqs_data):
 
 def _formatTime(time):
     tzinfo = dateutil.tz.gettz("US/Pacific")
-    return datetime.fromtimestamp(time / 1000, tzinfo).strftime("%a, %m/%d at %I:%M %p")
+    return datetime.fromtimestamp(time, tzinfo).strftime("%a, %m/%d at %I:%M %p")
 
 
 def parse_slots(args):
