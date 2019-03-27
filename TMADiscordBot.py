@@ -1,6 +1,6 @@
-__author__ = "Jesse Williams"
+__author__ = "tragicmuffin & MCDong"
 __license__ = "MIT"
-__version__ = "1.1"
+__version__ = "1.2"
 
 """
 Jeeves
@@ -83,10 +83,19 @@ commands_pronouns = {
     "!pronouns remove": "Allows you to remove a set of pronouns from your roles in Discord.",
 }
 
+commands_other_roles = {
+    "!addrole Raiders": "Gives you the @Raiders role.",
+    "!addrole Mythics": "Gives you the @Mythics role.",
+    
+    "!removerole Raiders": "Removes your @Raiders role.",
+    "!removerole Mythics": "Removes your @Mythics role.",
+}
+
 commands_all = {
     "General": commands_general,
     "World Quests": commands_wq,
     "Pronouns": commands_pronouns,
+    "Other Roles": command_other_roles,
 }
 
 
@@ -214,8 +223,8 @@ def commandHandler(message):
                 )
             )
 
-    #############
-    ### Other ###
+    ################
+    ### Pronouns ###
 
     cmd = "!pronouns add"
     if message.content.strip() == cmd:
@@ -256,6 +265,27 @@ def commandHandler(message):
             _expireFlag(f_pronouns_remove, message.author.name, seconds=60)
         )  # start a task to expire flag
 
+    ###################
+    ### Other Roles ###
+        
+    cmd = "!addrole Raiders"
+    if message.content.strip() == cmd:
+        raiders_role = discord.utils.get(message.guild.roles, name="Raiders")  # find role ID
+
+        yield from message.author.add_roles(raiders_role)  # add role to message sender
+        # TODO: add 'you already have this role' handler (try/except?)
+        
+    cmd = "!addrole Mythics"
+    if message.content.strip() == cmd:
+        mythics_role = discord.utils.get(message.guild.roles, name="Mythics")  # find role ID
+
+        yield from message.author.add_roles(mythics_role)  # add role to message sender
+        # TODO: add 'you already have this role' handler (try/except?)
+        
+        
+    # TODO: add invalid role handler
+        
+        
 
 @asyncio.coroutine
 def nonCommandHandler(message):
