@@ -1,11 +1,11 @@
 # Bot Commands
 
+## General
 | Command                | Description |
 |---                     |---|
 | !help, !commands       | Shows this list of commands. |
 
----
-
+## World Quests
 | Command                | Description |
 |---                     |---|
 | !wqscan                | Runs a one-time scan for a list of items and returns results in channel. |
@@ -15,14 +15,21 @@
 | !wqclear               | Clears all currently saved items from user's watch list. |
 
 #### Use ``slot:[SLOTNAME]`` to search for items in a certain slot instead of by name.
-##### Examples: ``!wqscan slot:trinket``, ``!wqwatch slot:cloak``.
+#### Examples: ``!wqscan slot:trinket``, ``!wqwatch slot:cloak``.
 
----
-
+## Pronouns
 | Command                | Description |
 |---                     |---|
 | !pronouns add          | Adds a set of pronouns to the user as a Discord role. |
 | !pronouns remove       | Removes a set of pronouns from the user. |   
+
+## Other Roles
+| Command                | Description |
+|---                     |---|
+| !addrole `[role]`    | Adds a Discord role to the user. |
+| !removerole `[role]` | Removes a Discord role from the user. |   
+
+#### Available roles: _Raider_, _Mythics_
 
 
 # WQ Watchlist Interface
@@ -42,7 +49,7 @@
     }
 }
 ```
-## Developer guide
+# Developer Guide
 To run this project locally, you must first install the PostgreSQL binary for your environment and be able to run [`psql` from the command line](https://www.postgresql.org/download/).
 
 This project uses [`Pipenv` (found here)](https://pipenv.readthedocs.io/en/latest/basics/) to manage all python dependencies. 
