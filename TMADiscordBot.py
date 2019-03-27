@@ -68,7 +68,7 @@ bot_watchlist_channel = "ask-jeeves"
 pronouns = ["She/Her", "He/Him", "They/Them", "Ze/Zir", "Xe/Xir"]
 
 
-# Lists of valid commands with descriptions.
+# Lists of valid commands with descriptions. Used in !help command.
 commands_general = {"!commands, !help": "Displays this message."}
 commands_wq = {
     "!wqscan": "Scan active WQs for an item or list of items.  e.g. *!wqscan Dinobone Charm, spellstaff, Wristwraps*",
@@ -84,8 +84,8 @@ commands_pronouns = {
 }
 
 commands_other_roles = {
-    "!addrole Raiders": "Gives you the @Raiders role.",
-    "!addrole Mythics": "Gives you the @Mythics role.",
+    "!addrole Raiders": "Assigns you the @Raiders role.",
+    "!addrole Mythics": "Assigns you the @Mythics role.",
     
     "!removerole Raiders": "Removes your @Raiders role.",
     "!removerole Mythics": "Removes your @Mythics role.",
@@ -267,23 +267,47 @@ def commandHandler(message):
 
     ###################
     ### Other Roles ###
-        
-    cmd = "!addrole Raiders"
-    if message.content.strip() == cmd:
-        raiders_role = discord.utils.get(message.guild.roles, name="Raiders")  # find role ID
+    try:
+        cmd = "!addrole raiders"
+        if message.content.strip().lower() == cmd:
+            raiders_role = discord.utils.get(message.guild.roles, name="Raiders")  # find role ID
 
-        yield from message.author.add_roles(raiders_role)  # add role to message sender
-        # TODO: add 'you already have this role' handler (try/except?)
-        
-    cmd = "!addrole Mythics"
-    if message.content.strip() == cmd:
-        mythics_role = discord.utils.get(message.guild.roles, name="Mythics")  # find role ID
+            yield from message.author.add_roles(raiders_role)  # add role to message sender
+            yield from message.channel.send("{} - Role added!".format(message.author.mention))
+            # TODO: add 'you already have this role' handler. `message.author.roles`?
 
-        yield from message.author.add_roles(mythics_role)  # add role to message sender
-        # TODO: add 'you already have this role' handler (try/except?)
+        cmd = "!addrole mythics"
+        if message.content.strip().lower() == cmd:
+            mythics_role = discord.utils.get(message.guild.roles, name="Mythics")  # find role ID
+
+            yield from message.author.add_roles(mythics_role)  # add role to message sender
+            yield from message.channel.send("{} - Role added!".format(message.author.mention))
+
+
+        cmd = "!removerole raiders"
+        if message.content.strip().lower() == cmd:
+            raiders_role = discord.utils.get(message.guild.roles, name="Raiders")  # find role ID
+
+            yield from message.author.remove_roles(raiders_role)  # remove role from message sender
+            yield from message.channel.send("{} - Role removed!".format(message.author.mention))
+
+        cmd = "!removerole mythics"
+        if message.content.strip().lower() == cmd:
+            mythics_role = discord.utils.get(message.guild.roles, name="Mythics")  # find role ID
+
+            yield from message.author.remove_roles(mythics_role)  # remove role from message sender
+            yield from message.channel.send("{} - Role removed!".format(message.author.mention))
         
         
-    # TODO: add invalid role handler
+        # TODO: Add catch-all for unrecognized roles
+    
+    except AttributeError:
+        admin = discord.utils.get(message.guild.members, nick="Tenxian")
+        yield from message.channel.send(
+            "{} - Something went wrong. {} needs to fix it.".format(
+                message.author.mention, admin.mention
+            )
+        )
         
         
 
