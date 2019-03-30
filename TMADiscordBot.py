@@ -97,7 +97,7 @@ commands_all = {
     "General": commands_general,
     "World Quests": commands_wq,
     "Pronouns": commands_pronouns,
-    "Other Roles": command_other_roles,
+    "Other Roles": commands_other_roles,
 }
 
 
