@@ -1,6 +1,6 @@
 __author__ = "tragicmuffin & MCDong"
 __license__ = "MIT"
-__version__ = "1.2"
+__version__ = "1.21"
 
 """
 Jeeves
@@ -63,8 +63,9 @@ else:
 client = discord.Client()
 
 
-botChannels = ["ask-jeeves", "bot-sandbox"]
+botChannels = ["ask-jeeves", "dice-lobby", "bot-sandbox"]
 bot_watchlist_channel = "ask-jeeves"
+bot_diceroll_channel = "dice-lobby"
 
 pronouns = ["She/Her", "He/Him", "They/Them", "Ze/Zir", "Xe/Xir"]
 
@@ -306,7 +307,7 @@ def commandHandler(message):
         cmd = "!roll"
         roll_success = True
         roll_default = (1, 100)
-        if message.content.startswith(cmd):
+        if message.content.startswith(cmd) and (message.channel.name == bot_diceroll_channel):
             if message.content.strip() == cmd:  # no number input
                 roll = random.randint(roll_default[0], roll_default[1])
             elif message.content[5:].strip().isdigit():  # single number input
