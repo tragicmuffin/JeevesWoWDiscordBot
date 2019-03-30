@@ -312,16 +312,16 @@ def commandHandler(message):
                 roll_range = roll_default
                 roll = random.randint(roll_default[0], roll_default[1])
             elif message.content[6:].strip().isdigit():  # single number input
-                roll_range = (roll_default[0], message.content[6:].strip())
+                roll_range = (roll_default[0], int(message.content[6:].strip()))
                 roll = random.randint(roll_range[0], roll_range[1])
             elif message.content[6:].split('-')[0].strip().isdigit() and message.content[6:].split('-')[1].strip().isdigit():  # range number input
-                roll_range = (message.content[6:].split('-')[0].strip(), message.content[6:].split('-')[1].strip())
+                roll_range = (int(message.content[6:].split('-')[0].strip()), int(message.content[6:].split('-')[1].strip()))
                 roll = random.randint(roll_range[0], roll_range[1])
             else:
                 roll_success = False
 
             if (roll_success):
-                yield from message.channel.send("{} rolled a **{}**  ({}-{})".format(message.author.mention, roll, roll_range[0], roll_range[1]))
+                yield from message.channel.send("{} rolled a **{}** *({}-{})*".format(message.author.mention, roll, roll_range[0], roll_range[1]))
 
 
     except AttributeError:
