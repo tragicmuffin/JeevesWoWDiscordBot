@@ -356,6 +356,10 @@ def commandHandler(message):
                 )
                 if roll == 69:
                     yield from message.channel.send("nice.")
+                if roll == 420:
+                    yield from message.channel.send(
+                        ":evergreen_tree::fire: 420 blaze it vape naysh \//\\ :fire::evergreen_tree:"
+                    )
 
     except AttributeError:
         admin = discord.utils.get(message.guild.members, nick="Tenxian")
