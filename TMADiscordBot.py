@@ -309,19 +309,19 @@ def commandHandler(message):
         roll_default = (1, 100)
         if message.content.startswith(cmd) and (message.channel.name == bot_diceroll_channel):
             if message.content.strip() == cmd:  # no number input
+                roll_range = roll_default
                 roll = random.randint(roll_default[0], roll_default[1])
-            elif message.content[5:].strip().isdigit():  # single number input
-                roll = random.randint(roll_default[0], message.content[5:].strip())
-            elif message.content[5:].split('-')[0].strip().isdigit() and message.content[5:].split('-')[1].strip().isdigit():  # range number input
-                roll = random.randint(message.content[5:].split('-')[0].strip(), message.content[5:].split('-')[1].strip())
+            elif message.content[6:].strip().isdigit():  # single number input
+                roll_range = (roll_default[0], message.content[6:].strip())
+                roll = random.randint(roll_range[0], roll_range[1])
+            elif message.content[6:].split('-')[0].strip().isdigit() and message.content[6:].split('-')[1].strip().isdigit():  # range number input
+                roll_range = (message.content[6:].split('-')[0].strip(), message.content[6:].split('-')[1].strip())
+                roll = random.randint(roll_range[0], roll_range[1])
             else:
                 roll_success = False
 
             if (roll_success):
-                yield from message.channel.send("{} rolled a **{}**".format(message.author.mention, roll))
-                if roll == 69:
-                    yield from message.channel.send("nice.")
-
+                yield from message.channel.send("{} rolled a **{}**  ({}-{})".format(message.author.mention, roll, roll_range[0], roll_range[1]))
 
 
     except AttributeError:
