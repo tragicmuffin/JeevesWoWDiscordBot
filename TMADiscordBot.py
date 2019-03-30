@@ -420,7 +420,7 @@ def on_message(message):
 
 # Periodically checks for new world quests
 @asyncio.coroutine
-def checkActiveWQs(interval=6, stale_wqs={}):
+def checkActiveWQs(interval=5, stale_wqs={}):
     interval_secs = interval * 60
     yield from client.wait_until_ready()
 
@@ -527,6 +527,6 @@ def on_ready():
 
 
 client.loop.create_task(
-    checkActiveWQs(interval=6, stale_wqs={})
+    checkActiveWQs(interval=5, stale_wqs={})
 )  # minutes to wait between scans
 client.run(TOKEN)  # run async thread
