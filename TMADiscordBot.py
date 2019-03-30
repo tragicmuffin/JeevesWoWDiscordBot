@@ -304,6 +304,7 @@ def commandHandler(message):
 
 
         cmd = "!roll"
+        roll_success = True
         roll_default = (1, 100)
         if message.content.startswith(cmd):
             if message.content.strip() == cmd:  # no number input
@@ -312,8 +313,11 @@ def commandHandler(message):
                 roll = random.randint(roll_default[0], message.content[5:].strip())
             elif message.content[5:].split('-')[0].strip().isdigit() and message.content[5:].split('-')[1].strip().isdigit():  # range number input
                 roll = random.randint(message.content[5:].split('-')[0].strip(), message.content[5:].split('-')[1].strip())
+            else:
+                roll_success = False
 
-        yield from message.channel.send("{} rolled a **{}**".format(message.author.mention, roll))
+            if (roll_success):
+                yield from message.channel.send("{} rolled a **{}**".format(message.author.mention, roll))
 
 
 
