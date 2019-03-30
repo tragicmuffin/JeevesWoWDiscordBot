@@ -88,7 +88,6 @@ commands_pronouns = {
 commands_other_roles = {
     "!addrole Raiders": "Assigns you the @Raiders role.",
     "!addrole Mythics": "Assigns you the @Mythics role.",
-
     "!removerole Raiders": "Removes your @Raiders role.",
     "!removerole Mythics": "Removes your @Mythics role.",
 }
@@ -272,57 +271,95 @@ def commandHandler(message):
     try:
         cmd = "!addrole raiders"
         if message.content.strip().lower() == cmd:
-            raiders_role = discord.utils.get(message.guild.roles, name="Raiders")  # find role ID
+            raiders_role = discord.utils.get(
+                message.guild.roles, name="Raiders"
+            )  # find role ID
 
-            yield from message.author.add_roles(raiders_role)  # add role to message sender
-            yield from message.channel.send("{} - Role added!".format(message.author.mention))
+            yield from message.author.add_roles(
+                raiders_role
+            )  # add role to message sender
+            yield from message.channel.send(
+                "{} - Role added!".format(message.author.mention)
+            )
             # TODO: add 'you already have this role' handler. `message.author.roles`?
 
         cmd = "!addrole mythics"
         if message.content.strip().lower() == cmd:
-            mythics_role = discord.utils.get(message.guild.roles, name="Mythics")  # find role ID
+            mythics_role = discord.utils.get(
+                message.guild.roles, name="Mythics"
+            )  # find role ID
 
-            yield from message.author.add_roles(mythics_role)  # add role to message sender
-            yield from message.channel.send("{} - Role added!".format(message.author.mention))
-
+            yield from message.author.add_roles(
+                mythics_role
+            )  # add role to message sender
+            yield from message.channel.send(
+                "{} - Role added!".format(message.author.mention)
+            )
 
         cmd = "!removerole raiders"
         if message.content.strip().lower() == cmd:
-            raiders_role = discord.utils.get(message.guild.roles, name="Raiders")  # find role ID
+            raiders_role = discord.utils.get(
+                message.guild.roles, name="Raiders"
+            )  # find role ID
 
-            yield from message.author.remove_roles(raiders_role)  # remove role from message sender
-            yield from message.channel.send("{} - Role removed!".format(message.author.mention))
+            yield from message.author.remove_roles(
+                raiders_role
+            )  # remove role from message sender
+            yield from message.channel.send(
+                "{} - Role removed!".format(message.author.mention)
+            )
 
         cmd = "!removerole mythics"
         if message.content.strip().lower() == cmd:
-            mythics_role = discord.utils.get(message.guild.roles, name="Mythics")  # find role ID
+            mythics_role = discord.utils.get(
+                message.guild.roles, name="Mythics"
+            )  # find role ID
 
-            yield from message.author.remove_roles(mythics_role)  # remove role from message sender
-            yield from message.channel.send("{} - Role removed!".format(message.author.mention))
-
+            yield from message.author.remove_roles(
+                mythics_role
+            )  # remove role from message sender
+            yield from message.channel.send(
+                "{} - Role removed!".format(message.author.mention)
+            )
 
         # TODO: Add catch-all for unrecognized roles
-
 
         cmd = "!roll"
         roll_success = True
         roll_default = (1, 100)
-        if message.content.startswith(cmd) and (message.channel.name == bot_diceroll_channel):
+        if message.content.startswith(cmd) and (
+            message.channel.name == bot_diceroll_channel
+        ):
             if message.content.strip() == cmd:  # no number input
                 roll_range = roll_default
                 roll = random.randint(roll_default[0], roll_default[1])
             elif message.content[6:].strip().isdigit():  # single number input
-                roll_range = (roll_default[0], int(message.content[6:].strip()))
-                roll = random.randint(roll_range[0], roll_range[1])
-            elif message.content[6:].split('-')[0].strip().isdigit() and message.content[6:].split('-')[1].strip().isdigit():  # range number input
-                roll_range = (int(message.content[6:].split('-')[0].strip()), int(message.content[6:].split('-')[1].strip()))
-                roll = random.randint(roll_range[0], roll_range[1])
+                roll_range = (roll_default[0], message.content[6:].strip())
+                roll = random.randint(int(roll_range[0]), int(roll_range[1]))
+            elif (
+                message.content[6:].split("-")[0].strip().isdigit()
+                and message.content[6:].split("-")[1].strip().isdigit()
+            ):  # range number input
+                roll_range = (
+                    message.content[6:].split("-")[0].strip(),
+                    message.content[6:].split("-")[1].strip(),
+                )
+                roll = random.randint(int(roll_range[0]), int(roll_range[1]))
             else:
                 roll_success = False
 
-            if (roll_success):
-                yield from message.channel.send("{} rolled a **{}** *({}-{})*".format(message.author.mention, roll, roll_range[0], roll_range[1]))
-
+            if roll_success:
+                yield from message.channel.send(
+                    "{} rolled a **{}**  ({}-{})".format(
+                        message.author.mention, roll, roll_range[0], roll_range[1]
+                    )
+                )
+                if roll == 69:
+                    yield from message.channel.send("nice.")
+                if roll == 420:
+                    yield from message.channel.send(
+                        ":evergreen_tree::fire: 420 blaze it vape naysh \//\\ :fire::evergreen_tree:"
+                    )
 
     except AttributeError:
         admin = discord.utils.get(message.guild.members, nick="Tenxian")
@@ -331,7 +368,6 @@ def commandHandler(message):
                 message.author.mention, admin.mention
             )
         )
-
 
 
 @asyncio.coroutine
