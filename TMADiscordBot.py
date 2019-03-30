@@ -11,6 +11,7 @@ A(nother) WoW discord bot.
 import asyncio
 from datetime import datetime
 from os import getenv, path
+import random
 
 import discord
 from sqlalchemy import Column, Integer, MetaData, String, Table, create_engine
@@ -86,7 +87,7 @@ commands_pronouns = {
 commands_other_roles = {
     "!addrole Raiders": "Assigns you the @Raiders role.",
     "!addrole Mythics": "Assigns you the @Mythics role.",
-    
+
     "!removerole Raiders": "Removes your @Raiders role.",
     "!removerole Mythics": "Removes your @Mythics role.",
 }
@@ -297,10 +298,29 @@ def commandHandler(message):
 
             yield from message.author.remove_roles(mythics_role)  # remove role from message sender
             yield from message.channel.send("{} - Role removed!".format(message.author.mention))
-        
-        
+
+
         # TODO: Add catch-all for unrecognized roles
-    
+
+
+        cmd = "!roll"
+        roll_success = True
+        roll_default = (1, 100)
+        if message.content.startswith(cmd):
+            if message.content.strip() == cmd:  # no number input
+                roll = random.randint(roll_default[0], roll_default[1])
+            elif message.content[5:].strip().isdigit():  # single number input
+                roll = random.randint(roll_default[0], message.content[5:].strip())
+            elif message.content[5:].split('-')[0].strip().isdigit() and message.content[5:].split('-')[1].strip().isdigit():  # range number input
+                roll = random.randint(message.content[5:].split('-')[0].strip(), message.content[5:].split('-')[1].strip())
+            else:
+                roll_success = False
+
+            if (roll_success):
+                yield from message.channel.send("{} rolled a **{}**".format(message.author.mention, roll))
+
+
+
     except AttributeError:
         admin = discord.utils.get(message.guild.members, nick="Tenxian")
         yield from message.channel.send(
@@ -308,8 +328,8 @@ def commandHandler(message):
                 message.author.mention, admin.mention
             )
         )
-        
-        
+
+
 
 @asyncio.coroutine
 def nonCommandHandler(message):
