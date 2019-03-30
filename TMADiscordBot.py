@@ -335,7 +335,7 @@ def commandHandler(message):
                 roll = random.randint(roll_default[0], roll_default[1])
             elif message.content[6:].strip().isdigit():  # single number input
                 roll_range = (roll_default[0], message.content[6:].strip())
-                roll = random.randint(roll_range[0], roll_range[1])
+                roll = random.randint(int(roll_range[0]), int(roll_range[1]))
             elif (
                 message.content[6:].split("-")[0].strip().isdigit()
                 and message.content[6:].split("-")[1].strip().isdigit()
@@ -344,7 +344,7 @@ def commandHandler(message):
                     message.content[6:].split("-")[0].strip(),
                     message.content[6:].split("-")[1].strip(),
                 )
-                roll = random.randint(roll_range[0], roll_range[1])
+                roll = random.randint(int(roll_range[0]), int(roll_range[1]))
             else:
                 roll_success = False
 
