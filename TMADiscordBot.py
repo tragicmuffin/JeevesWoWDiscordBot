@@ -319,6 +319,8 @@ def commandHandler(message):
 
             if (roll_success):
                 yield from message.channel.send("{} rolled a **{}**".format(message.author.mention, roll))
+                if roll == 69:
+                    yield from message.channel.send("nice.")
 
 
 
